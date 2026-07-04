@@ -245,9 +245,40 @@
 
   code.inl { font-family: var(--font-mono); font-size: 0.86em; background: var(--surface-2); padding: 2px 6px; border-radius: 5px; border: 1px solid var(--border); }
 
+  /* ── Scroll reveal ───────────────────────────────── */
+  .reveal { opacity: 0; transform: translateY(20px); will-change: opacity, transform;
+    transition: opacity .75s cubic-bezier(.2,.7,.2,1), transform .75s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* Card + interactive lift */
+  .card { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .card:hover { transform: translateY(-5px); border-color: color-mix(in srgb, var(--ember) 45%, var(--border));
+    box-shadow: 0 22px 44px -26px var(--glow); }
+  .card .ic { transition: transform .2s ease; }
+  .card:hover .ic { transform: scale(1.12) rotate(-4deg); }
+  .perf-cell { transition: background .2s ease; }
+  .perf-cell:hover { background: var(--surface-2); }
+  tbody tr { transition: background .15s ease; }
+  tbody tr:hover td { background: var(--ember-soft); }
+  details { transition: border-color .2s ease; }
+  details[open], details:hover { border-color: color-mix(in srgb, var(--ember) 32%, var(--border)); }
+
+  /* Hero: slow forge-glow behind the headline + breathing CTA */
+  .hero::before { content: ""; position: absolute; z-index: 0; top: -10%; left: -8%;
+    width: 46%; height: 70%; pointer-events: none;
+    background: radial-gradient(closest-side, var(--glow), transparent 72%);
+    opacity: .5; filter: blur(18px); animation: forge 7s ease-in-out infinite; }
+  @keyframes forge { 0%,100% { opacity: .34; transform: scale(1); } 50% { opacity: .6; transform: scale(1.08); } }
+  .btn-primary { animation: pulse 3.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 8px 26px -10px var(--glow); } 50% { box-shadow: 0 10px 40px -8px var(--glow); } }
+  .hero h1 .hot { background-size: 200% 100%; animation: shimmer 6s ease-in-out infinite; }
+  @keyframes shimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  .stat .n, .perf-cell .big, .fee-num { font-variant-numeric: tabular-nums; }
+
   @media (prefers-reduced-motion: reduce) {
-    .cursor { animation: none; }
-    .btn-primary:hover { transform: none; }
+    .cursor, .hero::before, .btn-primary, .hero h1 .hot { animation: none; }
+    .btn-primary:hover, .card:hover, .card:hover .ic { transform: none; }
+    .reveal { opacity: 1; transform: none; transition: none; }
   }
 </style>
 </head>
@@ -266,11 +297,11 @@
       Ember
     </div>
     <div class="nav-links">
-      <a href="#performance">Performance</a>
+      <a href="guide.html">Guide</a>
       <a href="#cards">Cards</a>
       <a href="#dashboard">Dashboard</a>
+      <a href="btx.html">What's BTX?</a>
       <a href="#install">Install</a>
-      <a href="changelog.html">Changelog</a>
       <a href="https://github.com/0xTym-dev/ember-btx">GitHub</a>
       <a class="nav-cta" href="#install">Get Ember</a>
     </div>
@@ -622,6 +653,66 @@ rocminfo | grep -m1 gfx</div></div></div>
     for (var j = 0; j < count; j++) { var q = mk(); q.y = Math.random() * h; parts.push(q); }
     draw();
     window.addEventListener('resize', function () { cancelAnimationFrame(raf); size(); draw(); });
+  })();
+
+  // ── Scroll reveal + count-up ─────────────────────────────────────
+  (function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // count-up: animate the leading number in a node, preserving unit spans
+    function countUp(el) {
+      if (el.dataset.counted) return; el.dataset.counted = '1';
+      var node = el.firstChild;
+      if (!node || node.nodeType !== 3) return;
+      var m = node.nodeValue.match(/^(\D*)([\d][\d,]*)([\s\S]*)$/);
+      if (!m) return;
+      var prefix = m[1], target = parseInt(m[2].replace(/,/g, ''), 10), suffix = m[3];
+      if (!isFinite(target)) return;
+      if (reduce || target === 0) { return; }
+      var dur = 1050, t0 = null;
+      function step(ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min(1, (ts - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+        node.nodeValue = prefix + Math.round(target * e).toLocaleString('en-US') + suffix;
+        if (p < 1) requestAnimationFrame(step);
+        else node.nodeValue = prefix + target.toLocaleString('en-US') + suffix;
+      }
+      requestAnimationFrame(step);
+    }
+
+    var counters = document.querySelectorAll('.stat .n, .perf-cell .big, .fee-num');
+
+    if (reduce || !('IntersectionObserver' in window)) {
+      document.querySelectorAll('.reveal').forEach(function (n) { n.classList.add('in'); });
+      return;
+    }
+
+    // tag elements to reveal, with a gentle stagger inside each group
+    var groups = ['.sec-head', '.term', '.perf-nums', '.table-scroll', '.tabs',
+      '.browser', '.fee', '.dash-feat > li', '.card', '.perf-cell', '#faq details'];
+    groups.forEach(function (sel) {
+      var nodes = document.querySelectorAll(sel);
+      nodes.forEach(function (n, i) {
+        // don't hide above-the-fold hero content
+        if (n.closest('.hero')) return;
+        n.classList.add('reveal');
+        n.style.transitionDelay = Math.min(i * 70, 280) + 'ms';
+      });
+    });
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.reveal').forEach(function (n) { io.observe(n); });
+
+    var co = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { countUp(en.target); co.unobserve(en.target); }
+      });
+    }, { threshold: 0.6 });
+    counters.forEach(function (n) { co.observe(n); });
   })();
 </script>
 </body>

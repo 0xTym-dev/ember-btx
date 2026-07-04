@@ -100,9 +100,13 @@ class State:
                 if self._last_ns is not None and self._last_ns_t is not None:
                     dns = ns - self._last_ns
                     dt = now - self._last_ns_t
-                    # only a forward, same-parent advance is a valid rate sample;
-                    # a parent change resets nonce_start (dns<=0 or absurd).
-                    if dt > 0.4 and 0 < dns < 5e11:
+                    # only a forward, same-parent advance is a valid rate sample.
+                    # on a pool, nonce_start is reassigned per job and jumps by
+                    # ~a full slice (slice_size) without that many nonces being
+                    # scanned; a genuine advance is rate*dt, well under a slice,
+                    # so reject deltas over half a slice as boundary jumps.
+                    ceiling = self.slice_size * 0.5 if self.slice_size else 5e11
+                    if dt > 0.4 and 0 < dns < ceiling:
                         rate = dns / dt
                         self.hr_samples.append(rate)
                         self.hr_hist.append((time.time(), self._smoothed_locked()))

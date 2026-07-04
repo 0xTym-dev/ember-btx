@@ -86,6 +86,7 @@ def measure(base_argv: list[str], batch: int, workers: int,
     powers: list[float] = []
     last_ns: int | None = None
     last_t: float | None = None
+    slice_size: int | None = None
     t_start = time.monotonic()
     measure_from = t_start + warmup
     measure_to = measure_from + window
@@ -100,10 +101,17 @@ def measure(base_argv: list[str], batch: int, workers: int,
             m = RE_WORKING.search(line)
             if m:
                 ns = int(m.group(1))
+                slice_size = int(m.group(2))
                 if last_ns is not None and last_t is not None:
                     dns = ns - last_ns
                     dt = now - last_t
-                    if dt > 0.4 and 0 < dns < 5e11 and now >= measure_from:
+                    # On a pool, nonce_start is reassigned per job and jumps by
+                    # ~a full slice (slice_size) without that many nonces being
+                    # scanned — a spurious ~slice_size/dt spike. A genuine advance
+                    # between two 'working' lines is rate*dt, orders of magnitude
+                    # below one slice, so cap accepted deltas at half a slice.
+                    ceiling = slice_size * 0.5 if slice_size else 5e11
+                    if dt > 0.4 and 0 < dns < ceiling and now >= measure_from:
                         samples.append(dns / dt)
                 last_ns, last_t = ns, now
             if want_power and now >= measure_from and now >= next_power:
