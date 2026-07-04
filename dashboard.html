@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember — mining dashboard</title>
+<style>
+  :root{
+    --bg:#141210; --panel:#1c1916; --panel2:#211d19; --line:#2c2621;
+    --tx:#ece4dc; --mut:#9a8d80; --dim:#6f6459;
+    --ember1:#ff5a36; --ember2:#ffb638; --ok:#57d98a; --warn:#ffb638; --bad:#f8746a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#241d17 0%,var(--bg) 55%);
+       color:var(--tx);font:14px/1.5 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+       -webkit-font-smoothing:antialiased}
+  a{color:var(--ember2);text-decoration:none} a:hover{text-decoration:underline}
+  header{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .logo{font-weight:700;font-size:20px;letter-spacing:.5px;
+        background:linear-gradient(90deg,var(--ember1),var(--ember2));
+        -webkit-background-clip:text;background-clip:text;color:transparent}
+  .spark-dot{width:9px;height:9px;border-radius:50%;background:var(--ember1);
+             box-shadow:0 0 10px 2px var(--ember1)}
+  .badge{margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 12px;
+         border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--dim)}
+  .dot.mining{background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 1.8s infinite}
+  .dot.connecting,.dot.starting{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+  .dot.stopped{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .up{color:var(--mut);font-size:12px}
+  main{padding:20px;max-width:1180px;margin:0 auto;
+       display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+        border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+  .card h2{margin:0 0 12px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);font-weight:600}
+  .col-4{grid-column:span 4} .col-5{grid-column:span 5} .col-6{grid-column:span 6}
+  .col-7{grid-column:span 7} .col-8{grid-column:span 8} .col-12{grid-column:span 12}
+  @media(max-width:820px){main{grid-template-columns:repeat(6,1fr)}
+     .col-4,.col-5,.col-6,.col-7,.col-8{grid-column:span 6}}
+  .big{font-size:40px;font-weight:700;line-height:1;letter-spacing:-1px}
+  .big .u{font-size:15px;color:var(--mut);font-weight:500;margin-left:6px}
+  .sub{color:var(--mut);font-size:12px;margin-top:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;margin-top:4px}
+  .kv .k{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .kv .v{font-size:19px;font-weight:600;margin-top:2px}
+  .v.ok{color:var(--ok)} .v.bad{color:var(--bad)} .v.amber{color:var(--ember2)}
+  canvas{width:100%;height:60px;display:block;margin-top:10px}
+  .bar{height:8px;border-radius:6px;background:#000;overflow:hidden;margin-top:6px}
+  .bar>span{display:block;height:100%;border-radius:6px;
+            background:linear-gradient(90deg,var(--ember1),var(--ember2))}
+  .barrow{margin-bottom:12px}
+  .barrow .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
+  .barrow .lab b{color:var(--tx);font-weight:600}
+  .temp .lab b{color:var(--tx)}
+  .hot span{background:linear-gradient(90deg,#f8746a,#ff9a3c)!important}
+  .log{background:#0d0b09;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+       height:250px;overflow-y:auto;font-size:12px;line-height:1.55;color:#b9ad9f}
+  .log div{white-space:pre-wrap;word-break:break-word}
+  .log .ok{color:var(--ok)} .log .rej{color:var(--bad)} .log .fee{color:var(--ember2)}
+  .log .warn{color:#e5b567}
+  .fee-note{font-size:12px;color:var(--mut);margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
+  .foot{grid-column:span 12;text-align:center;color:var(--dim);font-size:11px;padding:6px 0 2px}
+</style>
+</head>
+<body>
+<header>
+  <span class="spark-dot"></span>
+  <span class="logo">EMBER</span>
+  <span class="up" id="uptime">—</span>
+  <span class="badge" style="background:#2a1d12;border-color:#5a3a1a"><span style="color:#ffb638;font-size:12px">&#9670; sample data</span></span><span class="badge"><span class="dot" id="statdot"></span><span id="status">starting…</span></span>
+</header>
+<main>
+  <section class="card col-5">
+    <h2>Hashrate</h2>
+    <div><span class="big" id="hr">—</span><span class="u">nonces/s</span></div>
+    <div class="sub" id="eff">efficiency —</div>
+    <canvas id="spark" width="600" height="120"></canvas>
+  </section>
+
+  <section class="card col-4">
+    <h2>Shares</h2>
+    <div><span class="big v ok" id="acc" style="font-size:40px">—</span><span class="u">accepted</span></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="kv"><div class="k">Rejected</div><div class="v" id="rej">—</div></div>
+      <div class="kv"><div class="k">Accept %</div><div class="v" id="accpct">—</div></div>
+      <div class="kv"><div class="k">Shares/min</div><div class="v amber" id="spm">—</div></div>
+      <div class="kv"><div class="k">Blocks</div><div class="v" id="blk">—</div></div>
+    </div>
+  </section>
+
+  <section class="card col-3" style="grid-column:span 3">
+    <h2>Pool</h2>
+    <div class="kv"><div class="k">Difficulty</div><div class="v" id="diff">—</div></div>
+    <div class="kv" style="margin-top:12px"><div class="k">Job updates</div><div class="v" id="jobs">—</div></div>
+    <div class="kv" style="margin-top:12px"><div class="k">Last block tmpl</div><div class="v" id="notify" style="font-size:15px">—</div></div>
+    <div class="fee-note" id="feenote">Dev fee: idle</div>
+  </section>
+
+  <section class="card col-7">
+    <h2>GPU health</h2>
+    <div id="gpuwrap">
+      <div class="barrow temp"><div class="lab"><span>Edge temp</span><b id="te">—</b></div><div class="bar" id="teb"><span></span></div></div>
+      <div class="barrow temp"><div class="lab"><span>Junction (hotspot)</span><b id="tj">—</b></div><div class="bar" id="tjb"><span></span></div></div>
+      <div class="barrow temp"><div class="lab"><span>Memory temp</span><b id="tm">—</b></div><div class="bar" id="tmb"><span></span></div></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="kv"><div class="k">Power</div><div class="v amber" id="pw">—</div></div>
+        <div class="kv"><div class="k">GPU load</div><div class="v" id="use">—</div></div>
+        <div class="kv"><div class="k">Core clock</div><div class="v" id="sclk">—</div></div>
+        <div class="kv"><div class="k">Mem clock</div><div class="v" id="mclk">—</div></div>
+        <div class="kv"><div class="k">VRAM</div><div class="v" id="vram" style="font-size:15px">—</div></div>
+        <div class="kv"><div class="k">Efficiency</div><div class="v" id="eff2" style="font-size:15px">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card col-5">
+    <h2>Live log</h2>
+    <div class="log" id="log"></div>
+  </section>
+
+  <div class="foot">Ember · AMD GPU miner for BTX · dashboard refreshes every 1.5s · a transparent 1% developer fee runs in this binary</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const nf=new Intl.NumberFormat('en-US');
+function hms(s){s=Math.max(0,Math.floor(s));const d=Math.floor(s/86400);s%=86400;
+  const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);const x=s%60;
+  return (d?d+'d ':'')+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
+function ago(s){if(s==null)return '—';if(s<60)return Math.floor(s)+'s ago';
+  if(s<3600)return Math.floor(s/60)+'m ago';return Math.floor(s/3600)+'h ago';}
+function tclass(el,t,hot){el.className='bar'+(hot?' hot':'');}
+function bar(id,val,max,hotAt){const w=Math.max(0,Math.min(100,100*val/max));
+  const box=$(id);box.firstElementChild.style.width=w+'%';
+  box.className='bar'+(val>=hotAt?' hot':'');}
+
+function drawSpark(hist){
+  const c=$('spark'),ctx=c.getContext('2d');
+  const W=c.width,H=c.height;ctx.clearRect(0,0,W,H);
+  if(!hist||hist.length<2)return;
+  const vals=hist.map(p=>p[1]);const mx=Math.max(...vals)*1.15||1;
+  const g=ctx.createLinearGradient(0,0,W,0);g.addColorStop(0,'#ff5a36');g.addColorStop(1,'#ffb638');
+  ctx.lineWidth=2.5;ctx.strokeStyle=g;ctx.beginPath();
+  hist.forEach((p,i)=>{const x=W*i/(hist.length-1);const y=H-(H-8)*p[1]/mx-4;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.stroke();
+  // fill
+  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();
+  const fg=ctx.createLinearGradient(0,0,0,H);fg.addColorStop(0,'rgba(255,120,60,.28)');fg.addColorStop(1,'rgba(255,120,60,0)');
+  ctx.fillStyle=fg;ctx.fill();
+}
+
+function fmtHR(v){if(!v)return '—';if(v>=1e6)return (v/1e6).toFixed(2)+'M';
+  if(v>=1e3)return (v/1e3).toFixed(1)+'k';return Math.round(v);}
+
+const LOGCLS=l=>l.includes('share OK')?'ok':l.includes('REJECT')?'rej':
+  (l.includes('dev_fee')||l.includes('developer fee'))?'fee':
+  (l.includes('WARN')||l.includes('warning'))?'warn':'';
+
+async function tick(){
+  const s=window.__SAMPLE__;
+  // status
+  const st=s.status;$('status').textContent=
+    ({mining:'mining',connecting:'connecting…',starting:'starting…',stopped:'stopped'})[st]||st;
+  $('statdot').className='dot '+st;
+  $('uptime').textContent='uptime '+hms(s.uptime_s);
+  // hashrate
+  $('hr').textContent=fmtHR(s.hashrate);
+  $('eff').textContent=s.efficiency?('efficiency '+Math.round(s.efficiency)+' N/s per watt'):'efficiency —';
+  drawSpark(s.hashrate_hist);
+  // shares
+  $('acc').textContent=nf.format(s.accepted);
+  $('rej').textContent=nf.format(s.rejected);
+  const ap=$('accpct');ap.textContent=(s.accept_pct??100).toFixed(1)+'%';
+  ap.className='v '+((s.accept_pct>=98)?'ok':(s.accept_pct>=90?'amber':'bad'));
+  $('spm').textContent=(s.shares_per_min||0)+' /min';
+  $('blk').textContent=nf.format(s.blocks);
+  // pool
+  $('diff').textContent=s.diff_ratio?(s.diff_ratio.toFixed(1)+'× easier'):(s.difficulty||'—');
+  $('jobs').textContent=nf.format(s.job_updates)+'  ('+ago(s.last_notify_ago)+')';
+  $('notify').textContent=s.current_job?('#'+String(s.current_job).slice(0,10)):'—';
+  const fn=$('feenote');
+  if(s.fee_events>0){fn.innerHTML='Dev fee: <b style="color:var(--ember2)">active</b> · '+
+    s.fee_events+' rounds · '+ago(s.last_fee_ago);}
+  else{fn.textContent='Dev fee: idle (1% of runtime, disclosed)';}
+  // gpu
+  const g=s.gpu||{};const stale=s.gpu_stale;
+  const setT=(id,idb,v,hot)=>{$(id).textContent=v!=null?(v.toFixed(0)+'°C'):'—';
+    bar(idb,v||0,110,hot);};
+  setT('te','teb',g.temp_edge,85);
+  setT('tj','tjb',g.temp_junction,95);
+  setT('tm','tmb',g.temp_mem,95);
+  $('pw').textContent=g.power!=null?(g.power.toFixed(0)+' W'):'—';
+  $('use').textContent=g.use!=null?(g.use.toFixed(0)+' %'):'—';
+  $('sclk').textContent=g.sclk!=null?(g.sclk+' MHz'):'—';
+  $('mclk').textContent=g.mclk!=null?(g.mclk+' MHz'):'—';
+  $('vram').textContent=(g.vram_used_gb!=null&&g.vram_total_gb!=null)?
+    (g.vram_used_gb.toFixed(1)+' / '+g.vram_total_gb.toFixed(1)+' GB'):'—';
+  $('eff2').textContent=s.efficiency?(Math.round(s.efficiency)+' N/s/W'):'—';
+  document.getElementById('gpuwrap').style.opacity=stale?0.45:1;
+  // log
+  const box=$('log');const near=box.scrollHeight-box.scrollTop-box.clientHeight<40;
+  box.innerHTML=(s.log||[]).map(l=>'<div class="'+LOGCLS(l)+'">'+
+    l.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</div>').join('');
+  if(near)box.scrollTop=box.scrollHeight;
+}
+window.__SAMPLE__={"status": "mining", "uptime_s": 99738, "hashrate": 64820, "efficiency": 429, "hashrate_hist": [[1751000000, 64483], [1751000001, 64460], [1751000002, 65645], [1751000003, 64881], [1751000004, 65982], [1751000005, 65930], [1751000006, 65612], [1751000007, 66638], [1751000008, 65986], [1751000009, 66868], [1751000010, 66356], [1751000011, 66507], [1751000012, 67191], [1751000013, 67968], [1751000014, 66723], [1751000015, 66890], [1751000016, 67574], [1751000017, 68075], [1751000018, 67303], [1751000019, 66844], [1751000020, 67725], [1751000021, 65864], [1751000022, 67115], [1751000023, 65859], [1751000024, 65349], [1751000025, 65037], [1751000026, 65105], [1751000027, 65736], [1751000028, 64305], [1751000029, 64737], [1751000030, 64555], [1751000031, 63795], [1751000032, 63840], [1751000033, 62710], [1751000034, 62463], [1751000035, 62504], [1751000036, 63157], [1751000037, 62526], [1751000038, 62172], [1751000039, 62539], [1751000040, 62209], [1751000041, 61871], [1751000042, 62733], [1751000043, 62564], [1751000044, 61780], [1751000045, 62441], [1751000046, 62449], [1751000047, 63206], [1751000048, 63098], [1751000049, 62484], [1751000050, 63935], [1751000051, 62609], [1751000052, 63394], [1751000053, 64264], [1751000054, 63447], [1751000055, 64335], [1751000056, 63812], [1751000057, 65233], [1751000058, 65694], [1751000059, 65631], [1751000060, 66449], [1751000061, 65699], [1751000062, 66632], [1751000063, 66678], [1751000064, 66859], [1751000065, 66819], [1751000066, 67667], [1751000067, 67985], [1751000068, 67238], [1751000069, 67650], [1751000070, 66602], [1751000071, 67761], [1751000072, 67637], [1751000073, 68202], [1751000074, 67805], [1751000075, 66719], [1751000076, 66754], [1751000077, 67090], [1751000078, 65728], [1751000079, 66298], [1751000080, 65530], [1751000081, 65182], [1751000082, 64808], [1751000083, 65806], [1751000084, 64370], [1751000085, 64295], [1751000086, 64265], [1751000087, 64846], [1751000088, 63146], [1751000089, 63545], [1751000090, 63475], [1751000091, 63842], [1751000092, 63514], [1751000093, 63405], [1751000094, 62186], [1751000095, 62295], [1751000096, 62085], [1751000097, 62953], [1751000098, 63039], [1751000099, 61572], [1751000100, 61635], [1751000101, 61784], [1751000102, 61867], [1751000103, 62430], [1751000104, 62758], [1751000105, 62337], [1751000106, 62063], [1751000107, 63024], [1751000108, 63170], [1751000109, 63776], [1751000110, 64738], [1751000111, 64542], [1751000112, 64512], [1751000113, 64984], [1751000114, 65377], [1751000115, 64543], [1751000116, 66343], [1751000117, 66396], [1751000118, 66821], [1751000119, 66922]], "slice_size": 262144, "accepted": 1240, "rejected": 11, "blocks": 0, "accept_pct": 99.12, "shares_per_min": 6, "shares_per_min_avg": 5.8, "last_share_ago": 4, "diff_ratio": 92.0, "difficulty": null, "current_job": "job1a2b3c5e", "job_updates": 3480, "last_notify_ago": 3, "fee_events": 14, "last_fee_ago": 38, "gpu": {"temp_edge": 67, "temp_junction": 81, "temp_mem": 90, "power": 151, "use": 100, "sclk": 1904, "mclk": 1218, "vram_used_gb": 3.5, "vram_total_gb": 17.2}, "gpu_stale": false, "log": ["INFO solver daemon ready: matmul_n=256 b=16 r=8 (tip-preempt: on)", "INFO notify job=job1a2b3c4d height_hint=prev=9f3c1e77aa02b451... clean=false", "INFO share_target=000000ff8b... ratio_vs_block=92.0x easier", "INFO solver: working job=job1a2b3c4d nonce_start=884213760 slice=262144", "INFO share OK job=job1a2b3c4d nonce=884231041 (a/r/b=1239/11/0)", "INFO solver: {\"event\":\"dev_fee_round\",\"worker\":\"AMD-ALPHA-1\",\"slice\":22}", "INFO notify job=job1a2b3c5e height_hint=prev=9f3c1e77aa02b451... clean=false", "INFO solver: working job=job1a2b3c5e nonce_start=884476032 slice=262144", "INFO share OK job=job1a2b3c5e nonce=884489900 (a/r/b=1240/11/0)"], "exit_code": null};
+tick();
+</script>
+</body>
+</html>
