@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# ember — AMD GPU miner for BTX. User entrypoint.
+#
+#   ./ember --address <btx1z...> --worker rig1
+#
+# Everything after is passed through to the miner; later flags override the
+# defaults below, so you can add --batch-size, --pool, --log-level, etc.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Locate the bundled solver binary (release layout first, then dev layout).
+SOLVER=""
+for c in "$ROOT/bin/btx-gbt-solve" "$ROOT/solver-src/build/bin/btx-gbt-solve"; do
+  [ -x "$c" ] && { SOLVER="$c"; break; }
+done
+if [ -z "$SOLVER" ]; then
+  echo "ember: solver binary not found (looked in bin/ and solver-src/build/bin/)." >&2
+  echo "Run ./install.sh or build it with ./build-solver.sh first." >&2
+  exit 1
+fi
+
+# Locate the Python client.
+CLIENT_SRC="$ROOT/client/src"
+if [ ! -d "$CLIENT_SRC/dexbtx_miner" ]; then
+  echo "ember: client not found at $CLIENT_SRC." >&2
+  exit 1
+fi
+
+# ROCm runtime libs. Native ROCm lives in /opt/rocm; WSL2 too after
+# amdgpu-install --usecase=wsl,rocm. Prepend if present; keep any existing path.
+if [ -d /opt/rocm/lib ]; then
+  export LD_LIBRARY_PATH="/opt/rocm/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+export PYTHONPATH="$CLIENT_SRC${PYTHONPATH:+:$PYTHONPATH}"
+
+# The stock dexbtx client can auto-replace the solver with an upstream (NVIDIA)
+# binary — that would clobber the AMD build. Keep these OFF, always.
+export DEXBTX_NO_SOLVER_AUTOUPDATE=1
+export DEXBTX_NO_SOLVER_RECHECK=1
+export DEXBTX_NO_WRAPPER_AUTOUPDATE=1
+
+# Sensible defaults (overridable by passing the same flag in "$@").
+#  - pool: the public minebtx stratum
+#  - batch-size 384: tuned on RX 7800 XT (gfx1101); other cards may prefer a
+#    different value — override with --batch-size N.
+exec python3 -m dexbtx_miner \
+  --pool stratum.minebtx.com:3333 \
+  --gbt-solve "$SOLVER" \
+  --batch-size 384 \
+  --prepare-workers 16 \
+  --log-level INFO \
+  "$@"

@@ -1,0 +1,7 @@
+# runtime / build junk — never commit
+__pycache__/
+*.pyc
+*.err
+*.out
+.pytest_cache/
+.DS_Store
