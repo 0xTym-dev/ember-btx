@@ -31,9 +31,12 @@ same hashrate as stock at far lower power. See `docs/` for the energy profile.
 
 ```bash
 # 1. install ROCm (distro-specific — see docs/INSTALL-linux.md)
-# 2. preflight check (ROCm, GPU arch, binary checksum, Python):
+# 2. download the latest release and unpack it:
+#    https://github.com/0xTym-dev/ember-btx/releases/latest
+tar xzf ember-*-linux-x86_64.tar.gz && cd ember-*
+# 3. preflight check (ROCm, GPU arch, binary checksum, Python):
 ./install.sh
-# 3. mine to your payout address:
+# 4. mine to your payout address:
 ./ember --address <your-btx-address> --worker rig1
 ```
 

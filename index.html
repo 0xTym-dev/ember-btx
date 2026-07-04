@@ -400,8 +400,10 @@
             <div class="step"><div class="num">1</div><div class="txt"><b>Install ROCm</b> 6.x or newer (your distro's package, e.g. <code class="inl">rocm-hip-runtime</code>), then confirm your GPU is visible.
               <div class="code"><span class="c"># confirm the GPU</span>
 rocminfo | grep -m1 gfx     <span class="c"># e.g. gfx1101</span></div></div></div>
-            <div class="step"><div class="num">2</div><div class="txt"><b>Download &amp; preflight.</b> Grab the latest release, then let Ember check ROCm, your card, and the binary checksum.
-              <div class="code">./install.sh</div></div></div>
+            <div class="step"><div class="num">2</div><div class="txt"><b>Download &amp; preflight.</b> Grab the <a href="https://github.com/0xTym-dev/ember-btx/releases/latest" style="color:var(--ember)">latest release</a>, unpack it, then let Ember check ROCm, your card, and the binary checksum.
+              <div class="code"><span class="c"># download from the releases page, then:</span>
+tar xzf ember-*-linux-x86_64.tar.gz &amp;&amp; cd ember-*
+./install.sh</div></div></div>
             <div class="step"><div class="num">3</div><div class="txt"><b>Mine</b> to your own BTX address.
               <div class="code">./ember --address <span class="a">btx1z…your-address</span> --worker rig1</div></div></div>
           </div>
