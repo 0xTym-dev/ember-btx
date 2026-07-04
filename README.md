@@ -1,9 +1,9 @@
 # Ember — AMD GPU miner for BTX
 
 **The first GPU miner for the [BTX](https://pool.minebtx.com) MatMul proof-of-work
-that runs on AMD Radeon cards.** The official easyBTX/minebtx solver is NVIDIA-only;
+that runs on AMD Radeon cards.** Existing GPU solvers for BTX target NVIDIA;
 Ember is a HIP/ROCm port of the reference kernels, tuned for RDNA3, so Radeon
-owners can finally mine BTX at competitive efficiency.
+owners can mine BTX at competitive efficiency.
 
 > Status: **early access (v0.1, Linux)**. Developed and measured on a Radeon
 > RX 7800 XT. Other RDNA2/RDNA3/RDNA4 cards are expected to work but are
