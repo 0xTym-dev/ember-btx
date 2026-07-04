@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember — Changelog</title>
+<meta name="description" content="Release history for Ember, the AMD GPU miner for BTX.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c2 5-1 7-1 11 0 2 1 3 2 3 2 0 3-2 3-5 3 3 5 7 5 11a9 9 0 1 1-18 0c0-5 4-8 6-12 1-2 2-5 3-8z' fill='%23FF5E3A'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --ground:#16110E; --surface:#1E1815; --surface-2:#271F1A; --border:#3A2E27;
+    --text:#F3EAE3; --text-dim:#B7A79C; --text-faint:#887869;
+    --ember:#FF5E3A; --amber:#FFAE3C; --ember-soft:rgba(255,94,58,.13);
+    --good:#4FC98D; --info:#5AA9E6; --shadow:0 20px 50px -20px rgba(0,0,0,.7);
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --ground:#F3EDE7; --surface:#FBF7F3; --surface-2:#FFFFFF; --border:#E4D9CF;
+      --text:#221A15; --text-dim:#6B5C51; --text-faint:#93806F;
+      --ember:#D8410F; --amber:#C57714; --ember-soft:rgba(216,65,15,.08);
+      --good:#1C965F; --info:#2C6FA6; --shadow:0 20px 50px -24px rgba(90,50,30,.28); }
+  }
+  :root[data-theme="dark"] { --ground:#16110E; --surface:#1E1815; --surface-2:#271F1A; --border:#3A2E27;
+    --text:#F3EAE3; --text-dim:#B7A79C; --text-faint:#887869; --ember:#FF5E3A; --amber:#FFAE3C;
+    --ember-soft:rgba(255,94,58,.13); --good:#4FC98D; --info:#5AA9E6; --shadow:0 20px 50px -20px rgba(0,0,0,.7); }
+  :root[data-theme="light"] { --ground:#F3EDE7; --surface:#FBF7F3; --surface-2:#FFFFFF; --border:#E4D9CF;
+    --text:#221A15; --text-dim:#6B5C51; --text-faint:#93806F; --ember:#D8410F; --amber:#C57714;
+    --ember-soft:rgba(216,65,15,.08); --good:#1C965F; --info:#2C6FA6; --shadow:0 20px 50px -24px rgba(90,50,30,.28); }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--text); font-family:var(--font-sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; }
+  .wrap { max-width:760px; margin:0 auto; padding:0 24px; }
+
+  nav { position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--ground) 82%, transparent);
+    backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+  .nav-in { display:flex; align-items:center; justify-content:space-between; height:62px; }
+  .brand { display:flex; align-items:center; gap:11px; font-family:var(--font-mono); font-weight:600;
+    font-size:1.06rem; text-decoration:none; }
+  .mark { width:24px; height:24px; flex:none; }
+  .nav-links { display:flex; gap:24px; align-items:center; font-size:.9rem; }
+  .nav-links a { color:var(--text-dim); text-decoration:none; transition:color .15s; }
+  .nav-links a:hover { color:var(--text); }
+
+  header.head { padding:70px 0 26px; }
+  .eyebrow { font-family:var(--font-mono); font-size:.72rem; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--ember); margin:0 0 14px; }
+  h1 { font-family:var(--font-mono); font-weight:600; letter-spacing:-.02em; font-size:clamp(2rem,5vw,2.8rem);
+    margin:0 0 12px; }
+  .head p { color:var(--text-dim); font-size:1.05rem; margin:0; max-width:60ch; }
+  .head p code { font-family:var(--font-mono); font-size:.85em; background:var(--surface-2);
+    padding:2px 6px; border-radius:5px; border:1px solid var(--border); }
+
+  .log { padding:20px 0 90px; }
+  .rel { position:relative; padding:34px 0 10px 0; border-top:1px solid var(--border); }
+  .rel:first-child { border-top:none; }
+  .rel-head { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+  .ver { font-family:var(--font-mono); font-size:1.5rem; font-weight:700;
+    background:linear-gradient(100deg,var(--ember),var(--amber)); -webkit-background-clip:text;
+    background-clip:text; color:transparent; }
+  .date { font-family:var(--font-mono); font-size:.82rem; color:var(--text-faint); }
+  .tag-latest { font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em;
+    padding:3px 9px; border-radius:20px; background:var(--ember-soft); color:var(--ember);
+    border:1px solid color-mix(in srgb,var(--ember) 35%, transparent); }
+  .rel a.src { margin-left:auto; font-family:var(--font-mono); font-size:.8rem; color:var(--text-dim);
+    text-decoration:none; }
+  .rel a.src:hover { color:var(--ember); }
+
+  ul.items { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+  ul.items li { display:grid; grid-template-columns:auto 1fr; gap:13px; align-items:start; }
+  .kind { font-family:var(--font-mono); font-size:.66rem; text-transform:uppercase; letter-spacing:.06em;
+    padding:3px 8px; border-radius:6px; margin-top:2px; white-space:nowrap; }
+  .kind.new { background:color-mix(in srgb,var(--good) 16%,transparent); color:var(--good); }
+  .kind.fix { background:color-mix(in srgb,var(--info) 16%,transparent); color:var(--info); }
+  .kind.chg { background:var(--ember-soft); color:var(--ember); }
+  .items li .txt { color:var(--text-dim); font-size:.97rem; }
+  .items li .txt b { color:var(--text); font-weight:600; }
+  code.inl { font-family:var(--font-mono); font-size:.85em; background:var(--surface-2); padding:2px 6px;
+    border-radius:5px; border:1px solid var(--border); color:var(--text); }
+
+  footer { border-top:1px solid var(--border); padding:34px 0; color:var(--text-faint); font-size:.86rem; }
+  .foot-in { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .foot-in a { color:var(--text-dim); text-decoration:none; }
+  .foot-in a:hover { color:var(--ember); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="brand" href="index.html">
+      <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 2c2 5-1 7-1 11 0 2 1 3 2 3 2 0 3-2 3-5 3 3 5 7 5 11a9 9 0 1 1-18 0c0-5 4-8 6-12 1-2 2-5 3-8z" fill="url(#g)"/>
+        <defs><linearGradient id="g" x1="8" y1="2" x2="24" y2="30" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#FFAE3C"/><stop offset="1" stop-color="#FF5E3A"/></linearGradient></defs>
+      </svg>
+      Ember
+    </a>
+    <div class="nav-links">
+      <a href="index.html#install">Install</a>
+      <a href="index.html#dashboard">Dashboard</a>
+      <a href="https://github.com/0xTym-dev/ember-btx/releases">Releases</a>
+      <a href="https://github.com/0xTym-dev/ember-btx">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="head">
+  <div class="wrap">
+    <p class="eyebrow">Changelog</p>
+    <h1>What's new in Ember</h1>
+    <p>Every release of the AMD GPU miner for BTX. Download any version from the <a href="https://github.com/0xTym-dev/ember-btx/releases" style="color:var(--ember)">releases page</a>; <code>./install.sh</code> verifies the checksum.</p>
+  </div>
+</header>
+
+<main class="log">
+  <div class="wrap">
+
+    <section class="rel">
+      <div class="rel-head">
+        <span class="ver">0.1.1</span>
+        <span class="tag-latest">Latest</span>
+        <span class="date">2026-07-04</span>
+        <a class="src" href="https://github.com/0xTym-dev/ember-btx/releases/tag/v0.1.1">release ↗</a>
+      </div>
+      <ul class="items">
+        <li><span class="kind new">New</span><span class="txt"><b>Live web dashboard.</b> Run with <code class="inl">--gui</code> to open a local page showing real-time hashrate, accepted/rejected shares, GPU temps, power, clocks, efficiency, and a live log. Read-only; nothing leaves your machine.</span></li>
+        <li><span class="kind new">New</span><span class="txt"><b>DEEP TUNE auto-tuning.</b> <code class="inl">--deep-tune</code> tries different batch sizes and CPU-feed settings, measures the scan rate for each, and saves the best profile for your card — loaded automatically on every later run. Add <code class="inl">--tune-objective efficiency</code> for nonces-per-watt.</span></li>
+        <li><span class="kind chg">Change</span><span class="txt">Copy reworded to be neutral about other miners — Ember stands on being the AMD option, not on knocking anyone.</span></li>
+      </ul>
+    </section>
+
+    <section class="rel">
+      <div class="rel-head">
+        <span class="ver">0.1.0</span>
+        <span class="date">2026-07-04</span>
+        <a class="src" href="https://github.com/0xTym-dev/ember-btx/releases/tag/v0.1.0">release ↗</a>
+      </div>
+      <ul class="items">
+        <li><span class="kind new">New</span><span class="txt"><b>First public release.</b> The first GPU miner for BTX that runs on AMD Radeon cards.</span></li>
+        <li><span class="kind new">New</span><span class="txt"><b>Multi-arch HIP solver</b> in a single binary — RDNA2 (gfx1030/1031/1032), RDNA3 (gfx1100/1101/1102) and RDNA4 (gfx1200/1201). The runtime picks the match for your card.</span></li>
+        <li><span class="kind new">New</span><span class="txt"><b>Linux + WSL2 support</b>, an <code class="inl">install.sh</code> preflight (ROCm / GPU arch / checksum / Python), and the <code class="inl">ember</code> launcher.</span></li>
+        <li><span class="kind new">New</span><span class="txt">Transparent <b>1% developer fee</b>, disclosed and logged every round.</span></li>
+      </ul>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <a class="brand" href="index.html" style="font-size:.98rem">
+      <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="width:20px;height:20px">
+        <path d="M16 2c2 5-1 7-1 11 0 2 1 3 2 3 2 0 3-2 3-5 3 3 5 7 5 11a9 9 0 1 1-18 0c0-5 4-8 6-12 1-2 2-5 3-8z" fill="url(#g2)"/>
+        <defs><linearGradient id="g2" x1="8" y1="2" x2="24" y2="30" gradientUnits="userSpaceOnUse"><stop stop-color="#FFAE3C"/><stop offset="1" stop-color="#FF5E3A"/></linearGradient></defs>
+      </svg>
+      Ember
+    </a>
+    <div style="display:flex;gap:22px;flex-wrap:wrap">
+      <a href="index.html">Home</a>
+      <a href="https://github.com/0xTym-dev/ember-btx/releases">Releases</a>
+      <a href="https://github.com/0xTym-dev/ember-btx">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
