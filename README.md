@@ -41,6 +41,20 @@ Supported cards are listed in [`docs/GPU-SUPPORT.md`](docs/GPU-SUPPORT.md).
 Everything after `--worker` is passed through to the miner, so you can add
 `--batch-size N`, `--log-level DEBUG`, etc.
 
+## Dashboard (`--gui`)
+
+Add `--gui` to mine **and** open a live web dashboard in your browser:
+
+```bash
+./ember --address <your-btx-address> --worker rig1 --gui
+```
+
+It serves a local page at `http://127.0.0.1:8787` (change with `--gui-port N`,
+suppress the auto-open with `--no-open`) showing real-time hashrate, accepted /
+rejected shares, effective difficulty, GPU temps / power / clocks (via
+`rocm-smi`), efficiency, and a live log tail. It's read-only and local — nothing
+is sent anywhere. The terminal log keeps working as usual alongside it.
+
 ## Windows (WSL2)
 
 ROCm 7.2+ officially supports Radeon GPUs inside WSL2, so the same Linux binary

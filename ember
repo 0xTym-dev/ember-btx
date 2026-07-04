@@ -39,14 +39,37 @@ export DEXBTX_NO_SOLVER_AUTOUPDATE=1
 export DEXBTX_NO_SOLVER_RECHECK=1
 export DEXBTX_NO_WRAPPER_AUTOUPDATE=1
 
-# Sensible defaults (overridable by passing the same flag in "$@").
+# --gui launches the local web dashboard (gui/ember_gui.py) wrapping the miner.
+# Extract the dashboard flags so they don't reach the miner; everything else
+# passes through untouched.
+GUI=0; GUI_PORT=8787; GUI_OPEN=1
+PASS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --gui)        GUI=1; shift ;;
+    --gui-port)   GUI_PORT="$2"; shift 2 ;;
+    --no-open)    GUI_OPEN=0; shift ;;
+    *)            PASS+=("$1"); shift ;;
+  esac
+done
+
+# Sensible defaults (overridable by passing the same flag in the args above);
+# later flags override these.
 #  - pool: the public minebtx stratum
 #  - batch-size 384: tuned on RX 7800 XT (gfx1101); other cards may prefer a
 #    different value — override with --batch-size N.
-exec python3 -m dexbtx_miner \
-  --pool stratum.minebtx.com:3333 \
-  --gbt-solve "$SOLVER" \
-  --batch-size 384 \
-  --prepare-workers 16 \
-  --log-level INFO \
-  "$@"
+MINER=(python3 -m dexbtx_miner
+  --pool stratum.minebtx.com:3333
+  --gbt-solve "$SOLVER"
+  --batch-size 384
+  --prepare-workers 16
+  --log-level INFO
+  "${PASS[@]}")
+
+if [ "$GUI" = "1" ]; then
+  GUI_ARGS=(--port "$GUI_PORT")
+  [ "$GUI_OPEN" = "0" ] && GUI_ARGS+=(--no-open)
+  exec python3 "$ROOT/gui/ember_gui.py" "${GUI_ARGS[@]}" -- "${MINER[@]}"
+fi
+
+exec "${MINER[@]}"
