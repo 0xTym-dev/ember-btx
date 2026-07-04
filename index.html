@@ -498,6 +498,10 @@ rocminfo | grep -m1 gfx</div></div></div>
       <p>Through WSL2, yes — ROCm officially supports RX 7000 and RX 9000 cards there, and the same Linux binary runs unchanged. A native Windows build isn't available yet.</p>
     </details>
     <details>
+      <summary>Can it tune itself to my card?</summary>
+      <p>Yes — run <code class="inl">./ember --deep-tune</code> once. It tries different batch sizes and CPU-feed settings, measures the scan rate for each, and saves the best combination for your GPU to <code class="inl">~/.ember/</code>. Every later run loads it automatically. Add <code class="inl">--tune-objective efficiency</code> to optimize for nonces-per-watt instead of raw speed.</p>
+    </details>
+    <details>
       <summary>My card isn't in the list?</summary>
       <p>The build covers RDNA2/3/4 gaming cards. If <code class="inl">rocminfo</code> shows an arch that isn't included, open a GitHub issue — adding an architecture is just a rebuild.</p>
     </details>

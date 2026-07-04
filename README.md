@@ -58,6 +58,30 @@ rejected shares, effective difficulty, GPU temps / power / clocks (via
 `rocm-smi`), efficiency, and a live log tail. It's read-only and local — nothing
 is sent anywhere. The terminal log keeps working as usual alongside it.
 
+## Auto-tuning (`--deep-tune`)
+
+Every card is a little different. `--deep-tune` finds the best settings for
+**your** GPU automatically:
+
+```bash
+./ember --address <your-btx-address> --worker rig1 --deep-tune
+```
+
+It launches the miner with different batch sizes and CPU-feed worker counts,
+measures the steady-state scan rate (N/s) for each over a window, and does a
+coordinate search for the best combination. The winner is saved to
+`~/.ember/tune-<gfx>.json` and **loaded automatically on every later run** — no
+flags needed after tuning once. Options:
+
+- `--tune-objective efficiency` — optimize N/s **per watt** instead of raw N/s.
+- `--tune-window SEC` (default 120) / `--tune-warmup SEC` (default 40) — longer
+  windows are steadier but slower. A full run is ~a dozen trials, so it takes a
+  while — run it once per card, ideally overnight. `Ctrl-C` stops early and
+  keeps the best found so far.
+
+It only varies safe runtime flags (no root needed). Core-clock / power tuning is
+separate and manual — see `docs/`.
+
 ## Windows (WSL2)
 
 ROCm 7.2+ officially supports Radeon GPUs inside WSL2, so the same Linux binary

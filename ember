@@ -39,32 +39,64 @@ export DEXBTX_NO_SOLVER_AUTOUPDATE=1
 export DEXBTX_NO_SOLVER_RECHECK=1
 export DEXBTX_NO_WRAPPER_AUTOUPDATE=1
 
-# --gui launches the local web dashboard (gui/ember_gui.py) wrapping the miner.
-# Extract the dashboard flags so they don't reach the miner; everything else
-# passes through untouched.
+# Extract Ember's own flags (--gui dashboard, --deep-tune auto-tuner) so they
+# don't reach the miner; everything else passes through untouched.
 GUI=0; GUI_PORT=8787; GUI_OPEN=1
+TUNE=0; TUNE_WINDOW=120; TUNE_WARMUP=40; TUNE_OBJECTIVE=throughput
 PASS=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --gui)        GUI=1; shift ;;
-    --gui-port)   GUI_PORT="$2"; shift 2 ;;
-    --no-open)    GUI_OPEN=0; shift ;;
-    *)            PASS+=("$1"); shift ;;
+    --gui)            GUI=1; shift ;;
+    --gui-port)       GUI_PORT="$2"; shift 2 ;;
+    --no-open)        GUI_OPEN=0; shift ;;
+    --deep-tune)      TUNE=1; shift ;;
+    --tune-window)    TUNE_WINDOW="$2"; shift 2 ;;
+    --tune-warmup)    TUNE_WARMUP="$2"; shift 2 ;;
+    --tune-objective) TUNE_OBJECTIVE="$2"; shift 2 ;;
+    *)                PASS+=("$1"); shift ;;
   esac
 done
 
-# Sensible defaults (overridable by passing the same flag in the args above);
-# later flags override these.
-#  - pool: the public minebtx stratum
-#  - batch-size 384: tuned on RX 7800 XT (gfx1101); other cards may prefer a
-#    different value — override with --batch-size N.
+# Detect the GPU arch (best-effort) so we can load a per-card tuned profile.
+GFX="$(rocminfo 2>/dev/null | grep -oE 'gfx[0-9]{3,}' | sort -u | head -1)"
+[ -z "$GFX" ] && GFX="unknown"
+
+# Defaults, overridable by (a) a DEEP TUNE profile, then (b) explicit flags.
+#  - batch-size 384 / prepare-workers 16: tuned on RX 7800 XT (gfx1101).
+BATCH=384; WORKERS=16
+TUNEFILE="${HOME}/.ember/tune-${GFX}.json"
+if [ -f "$TUNEFILE" ]; then
+  # pull batch_size / prepare_workers from the saved profile
+  read -r _b _w < <(python3 - "$TUNEFILE" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(int(d.get("batch_size", 384)), int(d.get("prepare_workers", 16)))
+except Exception:
+    print(384, 16)
+PY
+)
+  [ -n "$_b" ] && BATCH="$_b"
+  [ -n "$_w" ] && WORKERS="$_w"
+  echo "ember: using DEEP TUNE profile for $GFX (batch=$BATCH workers=$WORKERS)" >&2
+fi
+
+# The base miner command. User flags in "${PASS[@]}" come last, so an explicit
+# --batch-size / --pool / --log-level etc. still wins over these defaults.
 MINER=(python3 -m dexbtx_miner
   --pool stratum.minebtx.com:3333
   --gbt-solve "$SOLVER"
-  --batch-size 384
-  --prepare-workers 16
+  --batch-size "$BATCH"
+  --prepare-workers "$WORKERS"
   --log-level INFO
   "${PASS[@]}")
+
+if [ "$TUNE" = "1" ]; then
+  # Auto-tune: try settings, measure scan rate, save ~/.ember/tune-$GFX.json.
+  exec python3 "$ROOT/gui/ember_tune.py" \
+    --gfx "$GFX" --window "$TUNE_WINDOW" --warmup "$TUNE_WARMUP" \
+    --objective "$TUNE_OBJECTIVE" -- "${MINER[@]}"
+fi
 
 if [ "$GUI" = "1" ]; then
   GUI_ARGS=(--port "$GUI_PORT")
