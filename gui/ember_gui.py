@@ -302,12 +302,35 @@ def serve(state: State, host: str, port: int) -> ThreadingHTTPServer:
 
 
 # ── miner subprocess ─────────────────────────────────────────────────────────
+def _terminate_group(proc: subprocess.Popen) -> None:
+    """Stop the miner AND its solver-daemon child. The miner leads its own process
+    group (start_new_session=True), so signalling the group reaches the solver too;
+    otherwise the solver orphans and keeps the GPU busy after the GUI exits."""
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    except Exception:
+        try:
+            proc.terminate()
+        except Exception:
+            return
+    try:
+        proc.wait(timeout=8)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+
 def run_miner(argv: list[str], state: State) -> subprocess.Popen:
     env = dict(os.environ)
     env["PYTHONUNBUFFERED"] = "1"
     proc = subprocess.Popen(
         argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, bufsize=1, env=env,
+        text=True, bufsize=1, env=env, start_new_session=True,
     )
 
     def pump():
@@ -372,11 +395,7 @@ def main() -> int:
     def shutdown(*_):
         stop.set()
         if proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+            _terminate_group(proc)
         httpd.shutdown()
 
     signal.signal(signal.SIGINT, lambda *a: (shutdown(), sys.exit(0)))

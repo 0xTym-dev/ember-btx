@@ -91,6 +91,14 @@ MINER=(python3 -m dexbtx_miner
   --log-level INFO
   "${PASS[@]}")
 
+# Ember's OWN release check — prints a one-line notice if a newer Ember is out.
+# Runs in the background so it never delays mining; fail-silent, rate-limited to
+# once/24h, opt out with EMBER_NO_UPDATE_CHECK=1. This is NOT the upstream solver
+# auto-updater (kept OFF above) — it downloads/replaces nothing, only notifies.
+if [ -f "$ROOT/VERSION" ] && [ -z "${EMBER_NO_UPDATE_CHECK:-}" ]; then
+  python3 "$ROOT/gui/ember_update.py" --version-file "$ROOT/VERSION" &
+fi
+
 if [ "$TUNE" = "1" ]; then
   # Auto-tune: try settings, measure scan rate, save ~/.ember/tune-$GFX.json.
   exec python3 "$ROOT/gui/ember_tune.py" \

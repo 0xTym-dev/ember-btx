@@ -13,12 +13,15 @@ owners can mine BTX at competitive efficiency.
 
 | Metric | Value |
 |---|---|
-| Effective pool rate | ~2,900 N/s (digests/s) |
+| Raw nonce rate (`dexbtx-miner benchmark`) | ~3.5M N/s |
+| Effective rate (full digests) | ~2,900 digests/s |
 | Power (with clock cap) | ~133 W |
 | Stock power, same hashrate | ~200 W → clock-cap saves ~35% |
 
-The solver is **memory-bound**: capping the core clock at ~1900 MHz gives the
-same hashrate as stock at far lower power. See `docs/` for the energy profile.
+Headline figure is the **raw nonce throughput** the standard benchmark reports
+(`tries_used / elapsed`), reproducible on any card. The solver is
+**memory-bound**: capping the core clock at ~1900 MHz gives the same hashrate as
+stock at far lower power. See `docs/` for the energy profile.
 
 ## Requirements
 

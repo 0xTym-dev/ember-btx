@@ -79,7 +79,7 @@ def measure(base_argv: list[str], batch: int, workers: int,
     env["PYTHONUNBUFFERED"] = "1"
     proc = subprocess.Popen(
         argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, bufsize=1, env=env,
+        text=True, bufsize=1, env=env, start_new_session=True,
     )
 
     samples: list[float] = []      # (nps) during the measurement window
@@ -120,12 +120,20 @@ def measure(base_argv: list[str], batch: int, workers: int,
                     powers.append(p)
                 next_power = now + 3.0
     finally:
+        # signal the whole process group so the solver-daemon child dies too —
+        # a leaked solver would keep the GPU busy and skew the NEXT trial.
         if proc.poll() is None:
-            proc.terminate()
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            except Exception:
+                proc.terminate()
             try:
                 proc.wait(timeout=8)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except Exception:
+                    proc.kill()
 
     if not samples:
         return 0.0, (sum(powers) / len(powers) if powers else None)

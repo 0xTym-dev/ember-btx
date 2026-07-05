@@ -6,7 +6,7 @@
 <title>Ember — AMD GPU Miner for BTX</title>
 <meta name="description" content="Ember is the first GPU miner for BTX that runs on AMD Radeon cards (RDNA2/3/4), on Linux and Windows via WSL2. Fast, efficient, transparent 1% fee.">
 <meta property="og:title" content="Ember — AMD GPU Miner for BTX">
-<meta property="og:description" content="The first GPU miner for BTX that runs on AMD Radeon. Linux + WSL2. ~2,900 N/s at 133 W on an RX 7800 XT.">
+<meta property="og:description" content="The first GPU miner for BTX that runs on AMD Radeon. Linux + WSL2. ~3.5M N/s at ~133 W on an RX 7800 XT.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c2 5-1 7-1 11 0 2 1 3 2 3 2 0 3-2 3-5 3 3 5 7 5 11a9 9 0 1 1-18 0c0-5 4-8 6-12 1-2 2-5 3-8z' fill='%23FF5E3A'/%3E%3C/svg%3E">
 <style>
@@ -320,7 +320,7 @@
         <a class="btn btn-ghost" href="#performance">See the numbers</a>
       </div>
       <div class="stat-strip">
-        <div class="stat"><div class="n">2,900 <small>N/s</small></div><div class="l">RX 7800 XT</div></div>
+        <div class="stat"><div class="n">3.5<small>M N/s</small></div><div class="l">RX 7800 XT</div></div>
         <div class="stat"><div class="n">133 <small>W</small></div><div class="l">tuned draw</div></div>
         <div class="stat"><div class="n">8 <small>archs</small></div><div class="l">one binary</div></div>
       </div>
@@ -374,10 +374,10 @@
           <h2>Fast where it counts, quiet on the meter.</h2>
           <p>Measured on a Radeon RX 7800 XT (gfx1101) against the live minebtx pool. Because the work is memory-bound, capping the core clock at ~1900 MHz keeps the same hashrate at far lower power.</p>
         </div>
-        <p style="color:var(--text-dim);font-size:.95rem;max-width:52ch">Numbers vary by card and pool difficulty. Ember reports its true scan rate in the log, so you always see what your card is actually doing.</p>
+        <p style="color:var(--text-dim);font-size:.95rem;max-width:52ch">That's the raw nonce rate from the built-in benchmark (<code class="inl">dexbtx-miner benchmark</code>) — the same metric the standard tooling reports, so you can reproduce it on your own card. Numbers vary by card and pool difficulty.</p>
       </div>
       <div class="perf-nums">
-        <div class="perf-cell hot"><div class="big">2,900<small> N/s</small></div><div class="cap">effective rate</div></div>
+        <div class="perf-cell hot"><div class="big">3,505,000<small> N/s</small></div><div class="cap">benchmark rate</div></div>
         <div class="perf-cell cool"><div class="big">133<small> W</small></div><div class="cap">with clock cap</div></div>
         <div class="perf-cell"><div class="big">~35<small> %</small></div><div class="cap">power saved</div></div>
         <div class="perf-cell"><div class="big">0<small> rej</small></div><div class="cap">typical rejects</div></div>
@@ -573,7 +573,7 @@ rocminfo | grep -m1 gfx</div></div></div>
       { html: '<span class="ok">✓</span> <span class="dim">authorized as</span> rig1', pre: 300 },
       { html: '<span class="dim">solver ready · batch 384 · GPU 98%</span>', pre: 380 },
       { html: '<span class="acc">◆ dev fee 1% — supports development</span>', pre: 300 },
-      { html: '<span class="ok">✓ share accepted</span> <span class="dim">2,914 N/s</span>', pre: 620 },
+      { html: '<span class="ok">✓ share accepted</span> <span class="dim">3.51M N/s</span>', pre: 620 },
       { html: '<span class="ok">✓ share accepted</span> <span class="dim">a/r 2/0</span>', pre: 780 },
       { html: '<span class="ok">✓ share accepted</span> <span class="dim">a/r 3/0 · 133 W</span>', pre: 760 }
     ];
@@ -668,6 +668,7 @@ rocminfo | grep -m1 gfx</div></div></div>
       if (!m) return;
       var prefix = m[1], target = parseInt(m[2].replace(/,/g, ''), 10), suffix = m[3];
       if (!isFinite(target)) return;
+      if (suffix && suffix.charAt(0) === '.') return;   // leave decimals (e.g. 3.5M) static
       if (reduce || target === 0) { return; }
       var dur = 1050, t0 = null;
       function step(ts) {
